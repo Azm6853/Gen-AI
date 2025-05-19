@@ -1,7 +1,3 @@
-gradio
+streamlit
 openai
-transformers
-torch
-scikit-learn
-nltk
-sentence-transformers
+python-dotenv
