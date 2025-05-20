@@ -22,7 +22,7 @@ def calculate_tdee(bmr, activity_level):
         "Moderately Active": 1.55,
         "Very Active": 1.725
     }
-    return bmr * multipliers[activity_level]
+    return bmr * multipliers.get(activity_level, 1.2)
 
 def get_deficit_recommendation(tdee, target_weight, current_weight, months):
     weight_to_lose = current_weight - target_weight
@@ -49,7 +49,6 @@ def gpt_reply(message, context="You are a friendly fitness coach helping users l
 st.set_page_config(page_title="FitLite Chatbot", layout="centered")
 st.title("🏋️ FitLite: AI Weight Loss Chatbot")
 
-# Initialize session state
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
     st.session_state.user_data = {
@@ -57,18 +56,15 @@ if "chat_history" not in st.session_state:
         "target_weight": None, "activity": None, "months": None, "goal_set": False
     }
 
-# Show current chat history
 for msg in st.session_state.chat_history:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# Input bar
 if prompt := st.chat_input("Say something to FitLite..."):
     st.session_state.chat_history.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Goal-setting conversation flow
     user_data = st.session_state.user_data
 
     if not user_data["goal_set"]:
@@ -91,34 +87,35 @@ if prompt := st.chat_input("Say something to FitLite..."):
             elif user_data["months"] is None:
                 user_data["months"] = int(prompt)
                 reply = "Finally, what's your activity level? (Sedentary / Lightly Active / Moderately Active / Very Active)"
-            elif user_data["activity"] is None and prompt.lower() in ["sedentary", "lightly active", "moderately active", "very active"]:
-                user_data["activity"] = prompt.title()
-                user_data["goal_set"] = True
+            elif user_data["activity"] is None:
+                valid_levels = ["sedentary", "lightly active", "moderately active", "very active"]
+                if prompt.lower() in valid_levels:
+                    user_data["activity"] = prompt.title()
+                    user_data["goal_set"] = True
 
-                # Calculate and give feedback
-                bmr = calculate_bmr(user_data["gender"], user_data["weight"], user_data["height"], user_data["age"])
-                tdee = calculate_tdee(bmr, user_data["activity"])
-                deficit = get_deficit_recommendation(tdee, user_data["target_weight"], user_data["weight"], user_data["months"])
-                target_cal = int(tdee - deficit)
+                    bmr = calculate_bmr(user_data["gender"], user_data["weight"], user_data["height"], user_data["age"])
+                    tdee = calculate_tdee(bmr, user_data["activity"])
+                    deficit = get_deficit_recommendation(tdee, user_data["target_weight"], user_data["weight"], user_data["months"])
+                    target_cal = int(tdee - deficit)
 
-                reply = (
-                    f"✅ Thanks! Based on your inputs:\n\n"
-                    f"- **TDEE** (maintenance calories): {int(tdee)} kcal/day\n"
-                    f"- To hit your goal in {user_data['months']} months, aim for: **{target_cal} kcal/day**\n"
-                    f"- Daily deficit: {deficit} kcal\n\n"
-                    f"Now, tell me what you ate today and I’ll help you adjust!"
-                )
+                    reply = (
+                        f"✅ Based on your inputs:\n\n"
+                        f"- **TDEE** (maintenance calories): {int(tdee)} kcal/day\n"
+                        f"- Goal in {user_data['months']} months: **{target_cal} kcal/day**\n"
+                        f"- Daily deficit: {deficit} kcal\n\n"
+                        f"Now, tell me what you ate today and I’ll help you adjust!"
+                    )
+                else:
+                    reply = "Please enter a valid activity level: Sedentary, Lightly Active, Moderately Active, or Very Active."
             else:
                 reply = "Let’s begin! How old are you?"
         except:
-            reply = "Oops, please enter a valid number or response for this step."
+            reply = "Oops, please enter a valid response for this step."
     else:
         reply = gpt_reply(prompt)
 
-    # Show GPT reply
     st.session_state.chat_history.append({"role": "assistant", "content": reply})
     with st.chat_message("assistant"):
         st.markdown(reply)
 
-# App footer
 st.caption("🤖 Powered by Azure OpenAI GPT-3.5 Turbo | FitLite Chat")
