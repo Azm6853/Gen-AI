@@ -1,15 +1,11 @@
 import streamlit as st
 import openai
-import os
-from dotenv import load_dotenv
 
-# Load API keys from .env file
-load_dotenv("azure_keys.env")
-
+# Load Azure OpenAI secrets from Streamlit Cloud
 openai.api_type = "azure"
-openai.api_base = os.getenv("AZURE_OPENAI_ENDPOINT")
+openai.api_base = st.secrets["AZURE_OPENAI_ENDPOINT"]
 openai.api_version = "2023-05-15"
-openai.api_key = os.getenv("AZURE_OPENAI_KEY")
+openai.api_key = st.secrets["AZURE_OPENAI_KEY"]
 
 def calculate_bmr(gender, weight, height, age):
     if gender == "Male":
@@ -35,7 +31,7 @@ def get_deficit_recommendation(tdee, target_weight, current_weight, months):
 def gpt_reply(message, context="You are a fitness coach helping a user lose weight. Be supportive and practical."):
     try:
         response = openai.ChatCompletion.create(
-            engine=os.getenv("AZURE_OPENAI_DEPLOYMENT"),
+            engine=st.secrets["AZURE_OPENAI_DEPLOYMENT"],
             messages=[
                 {"role": "system", "content": context},
                 {"role": "user", "content": message}
