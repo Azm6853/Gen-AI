@@ -1,15 +1,16 @@
 import streamlit as st
-import openai
+from openai import AzureOpenAI
 
-# Azure OpenAI setup using Streamlit secrets
-openai.api_type = "azure"
-openai.api_base = st.secrets["AZURE_OPENAI_ENDPOINT"]
-openai.api_version = "2023-05-15"
-openai.api_key = st.secrets["AZURE_OPENAI_KEY"]
-
-# Streamlit page config
+# Streamlit page setup
 st.set_page_config(page_title="FitLite Chatbot", layout="centered")
 st.title("🏋️ FitLite: Interactive GPT Fitness Coach")
+
+# Initialize Azure OpenAI client
+client = AzureOpenAI(
+    api_key=st.secrets["AZURE_OPENAI_KEY"],
+    api_version="2023-05-15",
+    azure_endpoint=st.secrets["AZURE_OPENAI_ENDPOINT"]
+)
 
 # Initialize chat history
 if "chat_history" not in st.session_state:
@@ -21,27 +22,25 @@ if "chat_history" not in st.session_state:
                 "Greet the user and ask them questions naturally to help build a personalized weight loss plan. "
                 "Collect information like age, gender, height, weight, goal weight, timeframe, and activity level step-by-step, just like a conversation. "
                 "Respond casually and warmly, and encourage them to continue. "
-                "After getting the details, help them calculate TDEE, calorie target, and make suggestions. "
                 "Never ask more than one question at a time."
             )
         }
     ]
 
-# Display previous chat messages (except system prompt)
+# Display previous messages (skip system prompt)
 for msg in st.session_state.chat_history[1:]:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# User input
+# User input + GPT response
 if prompt := st.chat_input("Say something to FitLite..."):
     st.session_state.chat_history.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Call GPT with full chat history
     try:
-        response = openai.ChatCompletion.create(
-            engine=st.secrets["AZURE_OPENAI_DEPLOYMENT"],
+        response = client.chat.completions.create(
+            model=st.secrets["AZURE_OPENAI_DEPLOYMENT"],
             messages=st.session_state.chat_history,
             temperature=0.7,
             max_tokens=300
@@ -50,10 +49,8 @@ if prompt := st.chat_input("Say something to FitLite..."):
     except Exception as e:
         reply = f"[GPT Error]: {str(e)}"
 
-    # Show and store GPT reply
     st.session_state.chat_history.append({"role": "assistant", "content": reply})
     with st.chat_message("assistant"):
         st.markdown(reply)
 
-# Footer
-st.caption("🤖 Powered by Azure OpenAI GPT-3.5 Turbo | FitLite Chat")
+st.caption("🤖 Powered by Azure OpenAI | FitLite Chatbot")
